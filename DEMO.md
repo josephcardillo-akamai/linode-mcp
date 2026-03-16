@@ -1,15 +1,17 @@
 # Demo Script: Full Multi-Tier Deployment
 
-End result: a load-balanced, HTTPS-secured web app at `https://mcpdemo.nothingtoteach.com` deployed entirely through natural language via MCP + Claude.
+End result: a load-balanced, HTTPS-secured web app at `https://<YOUR_DOMAIN>` deployed entirely through natural language via MCP + Claude.
 
 **Architecture:** 2 web servers + NodeBalancer (HTTP/HTTPS) + Cloud Firewall + DNS + Object Storage + SSL cert
 
-**Domain:** Use `mcpdemo.nothingtoteach.com`. If DNS is cached from a prior demo, use `mcpdemo1.nothingtoteach.com` as fallback.
+**Pre-demo:** Decide on your domain and gather these values:
+- Your domain (e.g. `demo.example.com`) — you must own the base domain (e.g. `example.com`)
+- Your SSH public key: `cat ~/.ssh/id_rsa.pub`
 
-**Pre-demo:** Copy your SSH public key — you'll need it for Prompt 2:
-```bash
-cat ~/.ssh/id_rsa.pub
-```
+Throughout this script, replace:
+- `<YOUR_DOMAIN>` with your full domain (e.g. `demo.example.com`)
+- `<YOUR_BASE_DOMAIN>` with the base domain (e.g. `example.com`)
+- `<YOUR_SUBDOMAIN>` with the subdomain portion (e.g. `demo`)
 
 ---
 
@@ -31,6 +33,7 @@ cat ~/.ssh/id_rsa.pub
 > # <UDF name="obj_access_key" label="OBJ Access Key" />
 > # <UDF name="obj_secret_key" label="OBJ Secret Key" />
 > # <UDF name="obj_bucket_url" label="OBJ Bucket URL" example="https://demo-assets.us-east-1.linodeobjects.com" />
+> # <UDF name="domain" label="Domain" example="demo.example.com" />
 >
 > set -e
 >
@@ -162,7 +165,7 @@ cat ~/.ssh/id_rsa.pub
 > server {
 >     listen ${PUBLIC_IP}:80;
 >     server_name _;
->     return 301 https://mcpdemo.nothingtoteach.com\$request_uri;
+>     return 301 https://${DOMAIN}\$request_uri;
 > }
 > NGINXEOF
 >
@@ -190,6 +193,7 @@ cat ~/.ssh/id_rsa.pub
 > - `obj_access_key`: `<OBJ_ACCESS_KEY>`
 > - `obj_secret_key`: `<OBJ_SECRET_KEY>`
 > - `obj_bucket_url`: `https://demo-assets.us-east-1.linodeobjects.com`
+> - `domain`: `<YOUR_DOMAIN>`
 
 *Deploys: 2 web servers with nginx, CSS uploaded to OBJ, SSH hardened. Note their private IPs for NodeBalancer setup.*
 
@@ -220,9 +224,9 @@ cat ~/.ssh/id_rsa.pub
 
 ## Prompt 6 — DNS
 
-> Create a domain for `nothingtoteach.com` (SOA email: `admin@nothingtoteach.com`) with type `master`. Then add an A record pointing `mcpdemo` to the NodeBalancer's IP `<NB_PUBLIC_IP>`.
+> Create a domain for `<YOUR_BASE_DOMAIN>` (SOA email: `admin@<YOUR_BASE_DOMAIN>`) with type `master`. Then add an A record pointing `<YOUR_SUBDOMAIN>` to the NodeBalancer's IP `<NB_PUBLIC_IP>`.
 
-*Deploys: DNS so `mcpdemo.nothingtoteach.com` resolves to the NodeBalancer.*
+*Deploys: DNS so `<YOUR_DOMAIN>` resolves to the NodeBalancer.*
 
 ---
 
@@ -230,16 +234,16 @@ cat ~/.ssh/id_rsa.pub
 
 This step combines local certbot with MCP for DNS verification. SSL certs are generated fresh each demo — new deployment means new IPs, new cert.
 
-> I need to generate a Let's Encrypt SSL certificate for `mcpdemo.nothingtoteach.com`. Run certbot locally with DNS challenge:
+> I need to generate a Let's Encrypt SSL certificate for `<YOUR_DOMAIN>`. Run certbot locally with DNS challenge:
 > ```bash
 > certbot certonly --key-type rsa --manual --preferred-challenges dns \
->   -d mcpdemo.nothingtoteach.com \
+>   -d <YOUR_DOMAIN> \
 >   --config-dir /tmp/certbot/config --work-dir /tmp/certbot/work --logs-dir /tmp/certbot/logs \
 >   --agree-tos --email <YOUR_EMAIL>
 > ```
-> When certbot gives you the ACME challenge value, create a TXT record on the `nothingtoteach.com` domain for `_acme-challenge.mcpdemo` with that value. Then continue certbot.
+> When certbot gives you the ACME challenge value, create a TXT record on the `<YOUR_BASE_DOMAIN>` domain for `_acme-challenge.<YOUR_SUBDOMAIN>` with that value. Then continue certbot.
 
-*Generates: RSA cert at `/tmp/certbot/config/live/mcpdemo.nothingtoteach.com/fullchain.pem` and key at `privkey.pem`.*
+*Generates: RSA cert at `/tmp/certbot/config/live/<YOUR_DOMAIN>/fullchain.pem` and key at `privkey.pem`.*
 
 *This is a great demo moment — MCP creates the ACME TXT record for DNS challenge validation.*
 
@@ -247,7 +251,7 @@ This step combines local certbot with MCP for DNS verification. SSL certs are ge
 
 ## Prompt 8 — HTTPS NodeBalancer config
 
-> Read the SSL certificate from `/tmp/certbot/config/live/mcpdemo.nothingtoteach.com/fullchain.pem` and the private key from `/tmp/certbot/config/live/mcpdemo.nothingtoteach.com/privkey.pem`. Create an HTTPS config on NodeBalancer `<NB_ID>` with port 443, protocol `https`, roundrobin algorithm, HTTP health checks on `/` (interval 15s, timeout 10s, 3 attempts), and pass the cert and key as `ssl_cert` and `ssl_key`. Then add both web servers as backend nodes to the new HTTPS config:
+> Read the SSL certificate from `/tmp/certbot/config/live/<YOUR_DOMAIN>/fullchain.pem` and the private key from `/tmp/certbot/config/live/<YOUR_DOMAIN>/privkey.pem`. Create an HTTPS config on NodeBalancer `<NB_ID>` with port 443, protocol `https`, roundrobin algorithm, HTTP health checks on `/` (interval 15s, timeout 10s, 3 attempts), and pass the cert and key as `ssl_cert` and `ssl_key`. Then add both web servers as backend nodes to the new HTTPS config:
 > - `demo-web-1` at `<WEB1_PRIVATE_IP>:80`
 > - `demo-web-2` at `<WEB2_PRIVATE_IP>:80`
 
@@ -260,9 +264,9 @@ This step combines local certbot with MCP for DNS verification. SSL certs are ge
 ## Prompt 9 — Verify
 
 > Verify the deployment:
-> 1. `curl -sI https://mcpdemo.nothingtoteach.com` — should return 200 with valid cert
-> 2. `curl -sI http://mcpdemo.nothingtoteach.com` — should return 301 redirect to HTTPS
-> 3. Run `curl -s https://mcpdemo.nothingtoteach.com | grep "Responding from"` multiple times — should alternate between `demo-web-1` and `demo-web-2`
+> 1. `curl -sI https://<YOUR_DOMAIN>` — should return 200 with valid cert
+> 2. `curl -sI http://<YOUR_DOMAIN>` — should return 301 redirect to HTTPS
+> 3. Run `curl -s https://<YOUR_DOMAIN> | grep "Responding from"` multiple times — should alternate between `demo-web-1` and `demo-web-2`
 > 4. `curl -sI http://<WEB1_PUBLIC_IP>` — should return 301 (not serve content directly)
 
 ---
@@ -287,14 +291,14 @@ NodeBalancer (<NB_PUBLIC_IP>)
 +------------------+    +------------------+
 
 Static assets: demo-assets.us-east-1.linodeobjects.com/style.css
-DNS: mcpdemo.nothingtoteach.com -> NodeBalancer IP
+DNS: <YOUR_DOMAIN> -> NodeBalancer IP
 Firewall: SSH + HTTP + HTTPS inbound, DROP all else
 ```
 
 ## Security Notes
 
 - Backends only serve content on private IPs — no direct public access to app
-- Public IPs redirect to `https://mcpdemo.nothingtoteach.com`
+- Public IPs redirect to `https://<YOUR_DOMAIN>`
 - HTTP traffic through the NodeBalancer is redirected to HTTPS via `X-Forwarded-Proto` check
 - SSH key-only auth (password auth disabled, root password login prohibited)
 - Cloud Firewall blocks all ports except 22, 80, 443
