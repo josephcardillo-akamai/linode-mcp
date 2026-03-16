@@ -130,8 +130,9 @@ This step combines local certbot with MCP for DNS verification. SSL certs are ge
 > 4. Delete the Cloud Firewall `demo-firewall`
 > 5. Delete the Linodes `demo-web-1` and `demo-web-2`
 > 6. Delete the StackScript `demo-web-app`
-> 7. Delete the Object Storage key `demo-assets-key`
-> 8. Delete the Object Storage bucket `demo-assets`
+> 7. Delete the `style.css` object from the `demo-assets` bucket (use `delete_object_storage_object` with the OBJ access key and secret key)
+> 8. Delete the Object Storage key `demo-assets-key`
+> 9. Delete the Object Storage bucket `demo-assets`
 
 *Tears down all demo resources in reverse dependency order. The base domain `nothingtoteach.com` and all non-demo resources are preserved.*
 

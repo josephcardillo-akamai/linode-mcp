@@ -1,3 +1,5 @@
+import boto3
+
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
@@ -65,3 +67,41 @@ def register(mcp: FastMCP, client: LinodeClient):
     ) -> dict:
         """Revoke an Object Storage access key."""
         return client.delete(f"/object-storage/keys/{key_id}")
+
+    @mcp.tool()
+    def list_object_storage_objects(
+        region: str = Field(description="Region ID where the bucket is located (e.g. 'us-east-1')."),
+        bucket: str = Field(description="The bucket label/name."),
+        prefix: str | None = Field(default=None, description="Filter objects by prefix (e.g. 'images/')."),
+    ) -> dict:
+        """List objects in an Object Storage bucket."""
+        params = {}
+        if prefix is not None:
+            params["prefix"] = prefix
+        return client.get(f"/object-storage/buckets/{region}/{bucket}/object-list", params=params)
+
+    @mcp.tool()
+    def delete_object_storage_object(
+        region: str = Field(description="Region ID where the bucket is located (e.g. 'us-east-1')."),
+        bucket: str = Field(description="The bucket label/name."),
+        object_name: str = Field(description="The key/name of the object to delete (e.g. 'style.css' or 'images/logo.png')."),
+        access_key: str = Field(description="OBJ access key (from create_object_storage_key)."),
+        secret_key: str = Field(description="OBJ secret key (from create_object_storage_key)."),
+    ) -> dict:
+        """Delete an object from an Object Storage bucket.
+
+        Requires S3-compatible credentials (access_key and secret_key) from create_object_storage_key.
+        The Linode API does not support object deletion directly — this uses the S3-compatible API.
+        """
+        try:
+            s3 = boto3.client(
+                "s3",
+                region_name=region,
+                endpoint_url=f"https://{region}.linodeobjects.com",
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
+            )
+            s3.delete_object(Bucket=bucket, Key=object_name)
+            return {"success": True}
+        except Exception as e:
+            return {"error": True, "message": str(e)}
