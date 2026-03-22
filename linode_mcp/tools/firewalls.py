@@ -86,6 +86,32 @@ def register(mcp: FastMCP, client: LinodeClient):
         return client.get(f"/networking/firewalls/{firewall_id}/rules")
 
     @mcp.tool()
+    def list_firewall_devices(
+        firewall_id: int = Field(description="The ID of the Firewall"),
+    ) -> dict:
+        """List all devices (Linodes) attached to a Cloud Firewall."""
+        return client.get(f"/networking/firewalls/{firewall_id}/devices")
+
+    @mcp.tool()
+    def add_firewall_device(
+        firewall_id: int = Field(description="The ID of the Firewall"),
+        linode_id: int = Field(description="The ID of the Linode to attach to this Firewall."),
+    ) -> dict:
+        """Attach a Linode to a Cloud Firewall."""
+        return client.post(
+            f"/networking/firewalls/{firewall_id}/devices",
+            json={"id": linode_id, "type": "linode"},
+        )
+
+    @mcp.tool()
+    def remove_firewall_device(
+        firewall_id: int = Field(description="The ID of the Firewall"),
+        device_id: int = Field(description="The device ID (from list_firewall_devices, not the Linode ID)."),
+    ) -> dict:
+        """Remove a device from a Cloud Firewall."""
+        return client.delete(f"/networking/firewalls/{firewall_id}/devices/{device_id}")
+
+    @mcp.tool()
     def update_firewall_rules(
         firewall_id: int = Field(description="The ID of the Firewall"),
         rules: dict = Field(description=(
