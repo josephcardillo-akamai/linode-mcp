@@ -8,3 +8,4 @@ uv.lock
 linode-api-openapi/
 *.pem
 /tmp/certbot/
+DEMO.md

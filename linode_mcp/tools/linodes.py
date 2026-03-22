@@ -38,11 +38,20 @@ def register(mcp: FastMCP, client: LinodeClient):
         tags: list[str] | None = Field(default=None, description="Tags to apply to this Linode."),
         stackscript_id: int | None = Field(default=None, description="StackScript ID to deploy with. Use list_stackscripts or create_stackscript first."),
         stackscript_data: dict | None = Field(default=None, description="Key-value pairs for StackScript UDF variables."),
+        interfaces: list[dict] | None = Field(default=None, description=(
+            "Network interfaces for VPC/VLAN configuration. List of interface objects in priority order. "
+            "Each interface: {'purpose': 'public'|'vlan'|'vpc', 'label': 'my-vlan' (required for VLAN), "
+            "'ipam_address': '10.0.0.1/24' (optional CIDR for VLAN)}. "
+            "Example for public + VLAN: [{'purpose': 'public'}, {'purpose': 'vlan', 'label': 'my-vlan', 'ipam_address': '10.0.0.1/24'}]"
+        )),
+        firewall_id: int | None = Field(default=None, description="Firewall ID to attach to this Linode on creation."),
     ) -> dict:
         """Create a new Linode instance.
 
         The Linode will boot automatically after creation. Use get_linode to check status.
         For app deployment, use stackscript_id + stackscript_data to run setup scripts on first boot.
+        Use interfaces to attach to a VLAN for private networking between Linodes.
+        Use firewall_id to attach a Cloud Firewall on creation.
         """
         body = {"region": region, "type": type}
         if image is not None:
@@ -61,6 +70,10 @@ def register(mcp: FastMCP, client: LinodeClient):
             body["stackscript_id"] = stackscript_id
         if stackscript_data is not None:
             body["stackscript_data"] = stackscript_data
+        if interfaces is not None:
+            body["interfaces"] = interfaces
+        if firewall_id is not None:
+            body["firewall_id"] = firewall_id
         return client.post("/linode/instances", json=body)
 
     @mcp.tool()
