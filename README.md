@@ -54,19 +54,21 @@ Talk to Claude in plain English to manage your Linode infrastructure:
 
 5. **Verify** — open Claude Code and run `/mcp` to confirm the Linode server is connected.
 
-## Available Tools (48 total)
+**Note:** This is not a full-service Linode API wrapper — it covers the essential infrastructure tasks for common workflows (compute, networking, storage, DNS). More tools are being added over time.
+
+## Available Tools (57 total)
 
 | Category | Tools |
 |---|---|
 | **Reference** | list_regions, list_linode_types, list_images |
 | **Linodes** | list, get, create, update, delete, boot, reboot, shutdown, resize |
 | **StackScripts** | list, create, delete |
-| **Firewalls** | list, get, create, update, delete, get_rules, update_rules |
+| **Firewalls** | list, get, create, update, delete, get_rules, update_rules, list_devices, add_device, remove_device |
 | **NodeBalancers** | list, get, create, delete, list_configs, create_config, create_node |
 | **Domains** | list, get, create, update, delete + record CRUD (list, create, update, delete) |
-| **Object Storage** | list_buckets, create_bucket, delete_bucket, create_key, list_keys, delete_key |
+| **Object Storage** | list_buckets, create_bucket, delete_bucket, create_key, list_keys, delete_key, list_objects, delete_object |
 | **Volumes** | list, create, delete, attach, detach |
-| **Networking** | list_ips |
+| **Networking** | list_ips, get_linode_networking, list_vlans |
 
 ## Example Usage
 
