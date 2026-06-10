@@ -47,6 +47,40 @@ def register(mcp: FastMCP, client: LinodeClient):
         return client.post("/linode/stackscripts", json=body)
 
     @mcp.tool()
+    def update_stackscript(
+        stackscript_id: int = Field(description="The ID of the StackScript to update"),
+        label: str | None = Field(default=None, description="A new label for the StackScript (3-128 characters)."),
+        script: str | None = Field(default=None, description="The bash script content. Can include StackScript UDF tags like '<UDF name=\"db_ip\" label=\"Database IP\" />' for variables."),
+        images: list[str] | None = Field(default=None, description="List of image IDs this StackScript is compatible with (e.g. ['linode/ubuntu24.04'])."),
+        description: str | None = Field(default=None, description="A description of what this StackScript does."),
+        is_public: bool | None = Field(default=None, description="Whether to make this StackScript public. Note: a public StackScript cannot be made private again."),
+        rev_note: str | None = Field(default=None, description="A note describing this revision."),
+    ) -> dict:
+        """Update an existing StackScript. Only StackScripts you own can be updated.
+
+        This is a partial update: only the fields you provide are changed, and any omitted
+        fields are left unchanged. Updating in place preserves the StackScript ID (unlike
+        deleting and recreating).
+
+        Note: a StackScript that is already public cannot be made private again — is_public
+        can only go from false to true.
+        """
+        body = {}
+        if label is not None:
+            body["label"] = label
+        if script is not None:
+            body["script"] = script
+        if images is not None:
+            body["images"] = images
+        if description is not None:
+            body["description"] = description
+        if is_public is not None:
+            body["is_public"] = is_public
+        if rev_note is not None:
+            body["rev_note"] = rev_note
+        return client.put(f"/linode/stackscripts/{stackscript_id}", json=body)
+
+    @mcp.tool()
     def delete_stackscript(
         stackscript_id: int = Field(description="The ID of the StackScript to delete"),
     ) -> dict:
