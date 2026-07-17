@@ -21,6 +21,17 @@ def register(mcp: FastMCP, client: LinodeClient):
         return client.get("/linode/stackscripts", params=params)
 
     @mcp.tool()
+    def get_stackscript(
+        stackscript_id: int = Field(description="The ID of the StackScript to retrieve"),
+    ) -> dict:
+        """Get details for a single StackScript, including its full script content.
+
+        Works for your own StackScripts as well as any public one. Use list_stackscripts
+        to find the ID.
+        """
+        return client.get(f"/linode/stackscripts/{stackscript_id}")
+
+    @mcp.tool()
     def create_stackscript(
         label: str = Field(description="A label for the StackScript (3-128 characters)."),
         script: str = Field(description="The bash script content. Can include StackScript UDF tags like '<UDF name=\"db_ip\" label=\"Database IP\" />' for variables."),
